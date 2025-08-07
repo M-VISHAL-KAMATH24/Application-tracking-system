@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Link,useNavigate,useParams } from 'react-router'
+import ATS from '~/components/ATS'
+import Details from '~/components/Details'
+import Summary from '~/components/Summary'
 import { usePuterStore } from '~/lib/puter'
 
 export const meta = () => ([
@@ -11,8 +14,12 @@ const resume = () => {
     const {id}=useParams();
     const [imageUrl,setImageUrl]=useState('');
     const [resumeUrl,setResumeUrl]=useState('');
-    const [feedback,setFeedback]=useState('');
+    const [feedback,setFeedback]=useState<Feedback | null>(null);
     const navigate=useNavigate();
+    useEffect(() => {
+        if(!isLoading && !auth.isAuthenticated) navigate(`/auth?next=/resume/${id}`);
+
+      }, [isLoading])
     useEffect(()=>{
         const loadResume=async()=>{
             const resume=await kv.get(`resume:${id}`);
@@ -44,7 +51,7 @@ const resume = () => {
             <section className='feedback-section '>
                 {imageUrl && resumeUrl &&(
                     <div className='animate-in fade-in duration-1000 gradient-border max-sm:m-0 h-[90%] max-wxl:h-fit w-fit'>
-                        <a>
+                        <a href={resumeUrl} target='_blank' rel='noopener noreferrer'>
                             <img src={imageUrl}
                             className='w-full h-full object-contain rounded-2xl' alt="" />
                         </a>
@@ -52,6 +59,20 @@ const resume = () => {
                     </div>
                 )}
                  </section> 
+                 <section className='feedback-section'>
+                    <h2 className='text-4xl text-black font-bold'>Resume Review</h2>
+                    {feedback ?(
+                        <div className='flex flex-col gap-8 animate-in fade-in animate-1000'>
+                            <Summary feedback={feedback}/>
+                            <ATS score={feedback.ATS.score ||0} suggestions={feedback.ATS.tips ||[]}/>
+                        <Details feedback={feedback}/>
+                        </div>
+
+
+                    ):(
+                        <img src="/images/resume-scan-2.gif" className="w-full" alt="" />
+                    )}
+                 </section>
         </div>
     </main>
   )
