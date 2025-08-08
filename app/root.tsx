@@ -5,12 +5,15 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
 import { usePuterStore } from "./lib/puter";
 import { useEffect } from "react";
+import { useAnalytics } from "./lib/useAnalytics"; // Adjust path
+import ReactGA from "react-ga4";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -26,10 +29,10 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { init }=usePuterStore();
-  useEffect(()=>{
+  const { init } = usePuterStore();
+  useEffect(() => {
     init();
-  },[init]);
+  }, [init]);
   return (
     <html lang="en">
       <head>
@@ -49,6 +52,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useAnalytics(); // Initialize GA
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && ReactGA.isInitialized) {
+      ReactGA.send({
+        hitType: "pageview",
+        page: location.pathname + location.search,
+        title: document.title,
+      });
+    }
+  }, [location]);
+
   return <Outlet />;
 }
 
@@ -57,13 +73,18 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
 
+  // Type-safe check for DevTools error
+  if (error instanceof Error && error.message?.includes('/.well-known/appspecific/com.chrome.devtools.json')) {
+    return null; // Ignore DevTools error
+  }
+
   if (isRouteErrorResponse(error)) {
     message = error.status === 404 ? "404" : "Error";
     details =
       error.status === 404
         ? "The requested page could not be found."
         : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
+  } else if (import.meta.env.DEV && error instanceof Error) {
     details = error.message;
     stack = error.stack;
   }
